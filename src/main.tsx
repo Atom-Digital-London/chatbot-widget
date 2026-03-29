@@ -1,23 +1,29 @@
 import { render } from 'preact';
 import { App } from './app.tsx';
 import type { WidgetConfig } from './types.tsx';
- // Make sure you imported your interface
 
-// 1. Get the script tag that loaded this file
 const scriptTag = document.currentScript as HTMLScriptElement;
 
-// 2. Build the config object from the data-attributes
-// If they aren't provided, we set defaults
 const config: WidgetConfig = {
   botId: scriptTag?.dataset.botId || 'default-bot',
   projectName: scriptTag?.dataset.projectName || 'Support Chat',
   primaryColor: scriptTag?.dataset.primaryColor || '#007bff',
   greeting: scriptTag?.dataset.greeting || 'Hello!',
-  apiHost: 'https://api.yourdomain.com'
+  // Change this to your local Ollama address for now!
+  apiHost: 'http://localhost:11434' 
 };
 
-const container = document.createElement('div');
-document.body.appendChild(container);
+// 1. Create the Host Element
+const host = document.createElement('div');
+host.id = 'chameleon-widget-root';
+document.body.appendChild(host);
 
-// 3. FIX: Pass the 'config' prop here!
+// 2. Attach the Shadow Root (The "Shield")
+const shadowRoot = host.attachShadow({ mode: 'open' });
+
+// 3. Create a container inside the shadow
+const container = document.createElement('div');
+shadowRoot.appendChild(container);
+
+// 4. Render into the shadow container
 render(<App config={config} />, container);
