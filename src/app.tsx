@@ -12,7 +12,6 @@ export function App({ config }: { config: WidgetConfig }) {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -21,9 +20,9 @@ export function App({ config }: { config: WidgetConfig }) {
     if (!inputValue.trim() || isLoading) return;
 
     const userContent = inputValue;
-    setInputValue(''); // Clear input immediately
+    setInputValue(''); 
 
-    // 1. Add User Message
+    // 1. Add User Message to UI
     const userMsg: Message = {
       id: Date.now().toString(),
       content: userContent,
@@ -34,37 +33,34 @@ export function App({ config }: { config: WidgetConfig }) {
     setIsLoading(true);
 
     try {
-      // 2. Call local Ollama (Phi-3)
-      const response = await fetch("http://localhost:11434/api/chat", {
+      // 2. Call your Hetzner Middleware 
+      // config.apiHost should now be "https://your-api-domain.com"
+      const response = await fetch(`${config.apiHost}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "phi3:mini",
-          messages: [
-            { 
-              role: "system", 
-              content: `You are a helpful assistant for ${config.projectName}. Keep answers short.` 
-            },
-            { role: "user", content: userContent }
-          ],
-          stream: false,
+          message: userContent,
+          customerId: config.botId // Tells backend which PDF to search
         }),
       });
 
+      if (!response.ok) throw new Error("Backend unreachable");
+
       const data = await response.json();
       
-      // 3. Add AI Message
+      // 3. Add AI Message from PDF Context
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
-        content: data.message.content,
+        content: data.text, // The field returned by your new Node.js server
         role: 'assistant',
         timestamp: Date.now()
       };
       setMessages(prev => [...prev, aiMsg]);
+
     } catch (error) {
       setMessages(prev => [...prev, {
         id: 'error',
-        content: "I can't reach my brain. Is Ollama running?",
+        content: "Sorry, I'm having trouble connecting to my knowledge base.",
         role: 'assistant',
         timestamp: Date.now()
       }]);
@@ -97,8 +93,8 @@ export function App({ config }: { config: WidgetConfig }) {
               type="text" 
               value={inputValue}
               onInput={(e) => setInputValue((e.target as HTMLInputElement).value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Type here..." 
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              placeholder="Ask about our services..." 
             />
             <button onClick={handleSend} disabled={isLoading}>Send</button>
           </div>
